@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Ethers.js Loading</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 DApp Diagnostics</h1>
+    <p>This page tests if all required libraries are loading correctly.</p>
+
+    <div id="results"></div>
+
+    <h2>Actions:</h2>
+    <button onclick="testMetaMask()">Test MetaMask Connection</button>
+    <button onclick="testContract()">Test Contract Connection</button>
+    <button onclick="window.location.href='index.html'">Go to DApp</button>
+
+    <!-- Load ethers.js -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    
+    <!-- Fallback -->
+    <script>
+        if (typeof ethers === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"><\/script>');
+        }
+    </script>
+    
+    <script src="config.js"></script>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, status, message, details = '') {
+            const div = document.createElement('div');
+            div.className = `status ${status}`;
+            div.innerHTML = `
+                <strong>${status === 'success' ? '✅' : status === 'error' ? '❌' : 'ℹ️'} ${title}</strong><br>
+                ${message}
+                ${details ? `<pre>${details}</pre>` : ''}
+            `;
+            resultsDiv.appendChild(div);
+        }
+
+        // Test 1: Check if ethers.js is loaded
+        if (typeof ethers !== 'undefined') {
+            addResult(
+                'ethers.js Library', 
+                'success',
+                `ethers.js is loaded successfully!`,
+                `Version: ${ethers.version}`
+            );
+        } else {
+            addResult(
+                'ethers.js Library',
+                'error',
+                'ethers.js failed to load. Check your internet connection or try disabling ad blockers.'
+            );
+        }
+
+        // Test 2: Check if MetaMask is installed
+        if (typeof window.ethereum !== 'undefined') {
+            addResult(
+                'MetaMask Wallet',
+                'success',
+                'MetaMask is installed and detected!'
+            );
+        } else {
+            addResult(
+                'MetaMask Wallet',
+                'error',
+                'MetaMask is not installed. Please install MetaMask extension.'
+            );
+        }
+
+        // Test 3: Check if config is loaded
+        if (typeof CONFIG !== 'undefined') {
+            addResult(
+                'DApp Configuration',
+                'success',
+                'Configuration loaded successfully!',
+                `Contract Address: ${CONFIG.CONTRACT_ADDRESS}\nSupported Networks: ${Object.keys(CONFIG.NETWORKS).length}`
+            );
+        } else {
+            addResult(
+                'DApp Configuration',
+                'error',
+                'Configuration file (config.js) failed to load.'
+            );
+        }
+
+        // Test 4: Browser compatibility
+        const browserTests = {
+            'localStorage': typeof localStorage !== 'undefined',
+            'crypto.subtle': typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined',
+            'fetch API': typeof fetch !== 'undefined',
+            'Promise': typeof Promise !== 'undefined',
+        };
+
+        const browserPass = Object.values(browserTests).every(v => v);
+        if (browserPass) {
+            addResult(
+                'Browser Compatibility',
+                'success',
+                'Your browser supports all required features!',
+                JSON.stringify(browserTests, null, 2)
+            );
+        } else {
+            addResult(
+                'Browser Compatibility',
+                'error',
+                'Your browser is missing some required features.',
+                JSON.stringify(browserTests, null, 2)
+            );
+        }
+
+        // Test functions
+        async function testMetaMask() {
+            if (typeof window.ethereum === 'undefined') {
+                alert('❌ MetaMask is not installed!');
+                return;
+            }
+
+            try {
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                addResult(
+                    'MetaMask Connection Test',
+                    'success',
+                    'Successfully connected to MetaMask!',
+                    `Connected Account: ${accounts[0]}`
+                );
+            } catch (error) {
+                addResult(
+                    'MetaMask Connection Test',
+                    'error',
+                    'Failed to connect to MetaMask',
+                    error.message
+                );
+            }
+        }
+
+        async function testContract() {
+            if (typeof ethers === 'undefined') {
+                alert('❌ ethers.js is not loaded!');
+                return;
+            }
+
+            if (typeof CONFIG === 'undefined') {
+                alert('❌ Config not loaded!');
+                return;
+            }
+
+            try {
+                // First, try with MetaMask if available
+                if (typeof window.ethereum !== 'undefined') {
+                    addResult(
+                        'Contract Connection Test',
+                        'info',
+                        'Testing with MetaMask provider...'
+                    );
+                    
+                    const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+                    await provider.ready;
+                    
+                    const network = await provider.getNetwork();
+                    
+                    addResult(
+                        'Network Detection',
+                        'success',
+                        `Connected to network: ${network.name || 'Unknown'}`,
+                        `Chain ID: ${network.chainId}`
+                    );
+                    
+                    const contract = new ethers.Contract(
+                        CONFIG.CONTRACT_ADDRESS,
+                        CONFIG.CONTRACT_ABI,
+                        provider
+                    );
+
+                    const admin = await contract.admin();
+                    const totalCerts = await contract.getTotalCertificates();
+
+                    addResult(
+                        'Contract Connection Test',
+                        'success',
+                        'Successfully connected to smart contract via MetaMask!',
+                        `Admin Address: ${admin}\nTotal Certificates: ${totalCerts.toString()}\nNetwork: ${network.name || network.chainId}`
+                    );
+                } else {
+                    // Fallback to Infura
+                    addResult(
+                        'Contract Connection Test',
+                        'info',
+                        'MetaMask not available, trying Infura...'
+                    );
+                    
+                    const provider = new ethers.providers.JsonRpcProvider(
+                        'https://sepolia.infura.io/v3/YOUR_INFURA_KEY'
+                    );
+                    
+                    const contract = new ethers.Contract(
+                        CONFIG.CONTRACT_ADDRESS,
+                        CONFIG.CONTRACT_ABI,
+                        provider
+                    );
+
+                    const admin = await contract.admin();
+                    const totalCerts = await contract.getTotalCertificates();
+
+                    addResult(
+                        'Contract Connection Test',
+                        'success',
+                        'Successfully connected to smart contract via Infura!',
+                        `Admin Address: ${admin}\nTotal Certificates: ${totalCerts.toString()}`
+                    );
+                }
+            } catch (error) {
+                addResult(
+                    'Contract Connection Test',
+                    'error',
+                    'Failed to connect to smart contract',
+                    `Error: ${error.message}\n\nPossible causes:\n- Wrong network selected in MetaMask\n- Contract address incorrect\n- Network connectivity issues`
+                );
+            }
+        }
+    </script>
+</body>
+</html>

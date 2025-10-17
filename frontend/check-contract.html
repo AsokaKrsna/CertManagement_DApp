@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract Verification Checker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+        .check-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .check-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .contract-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .contract-info strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Contract Verification Checker</h1>
+        
+        <div class="contract-info">
+            <strong>Contract Address:</strong> 0xA2710012eE8a515e340f90B2f4952ad621F0e118<br>
+            <strong>Network:</strong> Sepolia Testnet (Chain ID: 11155111)<br>
+            <strong>Etherscan:</strong> <a href="https://sepolia.etherscan.io/address/0xA2710012eE8a515e340f90B2f4952ad621F0e118" target="_blank">View on Etherscan</a>
+        </div>
+
+        <button onclick="runAllChecks()">🚀 Run All Checks</button>
+        <button onclick="clearResults()">🗑️ Clear Results</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="config.js"></script>
+    <script>
+        const CONTRACT_ADDRESS = "0xA2710012eE8a515e340f90B2f4952ad621F0e118";
+        const SEPOLIA_CHAIN_ID = 11155111;
+        
+        function addResult(title, type, message, details = '') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'check-section';
+            
+            let html = `<div class="check-title">${title}</div>`;
+            html += `<div class="result ${type}">${message}`;
+            if (details) {
+                html += `<br><small>${details}</small>`;
+            }
+            html += `</div>`;
+            
+            resultDiv.innerHTML = html;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function checkMetaMaskNetwork() {
+            if (typeof window.ethereum === 'undefined') {
+                addResult('❌ MetaMask Check', 'error', 'MetaMask is not installed!');
+                return false;
+            }
+
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                const chainIdDecimal = parseInt(chainId, 16);
+                
+                addResult(
+                    '✅ MetaMask Detected', 
+                    'success', 
+                    `MetaMask is installed and accessible`,
+                    `Connected Accounts: ${accounts.length > 0 ? accounts[0] : 'None (not connected)'}<br>Current Chain ID: ${chainIdDecimal} (0x${chainIdDecimal.toString(16)})`
+                );
+
+                if (chainIdDecimal !== SEPOLIA_CHAIN_ID) {
+                    addResult(
+                        '⚠️ Wrong Network', 
+                        'warning', 
+                        `MetaMask is on Chain ID ${chainIdDecimal}, but contract is on Sepolia (${SEPOLIA_CHAIN_ID})`,
+                        'Please switch to Sepolia network in MetaMask'
+                    );
+                    return false;
+                } else {
+                    addResult('✅ Correct Network', 'success', 'MetaMask is connected to Sepolia testnet');
+                    return true;
+                }
+            } catch (error) {
+                addResult('❌ MetaMask Error', 'error', error.message);
+                return false;
+            }
+        }
+
+        async function checkContractBytecode() {
+            try {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const code = await provider.getCode(CONTRACT_ADDRESS);
+                
+                if (code === '0x' || code === '0x0') {
+                    addResult(
+                        '❌ Contract Not Found', 
+                        'error', 
+                        `No bytecode found at ${CONTRACT_ADDRESS}`,
+                        'The contract may not be deployed on the current network, or the address is incorrect'
+                    );
+                    return false;
+                } else {
+                    addResult(
+                        '✅ Contract Exists', 
+                        'success', 
+                        'Contract bytecode found on Sepolia',
+                        `Bytecode size: ${code.length} characters`
+                    );
+                    return true;
+                }
+            } catch (error) {
+                addResult('❌ Bytecode Check Error', 'error', error.message);
+                return false;
+            }
+        }
+
+        async function checkContractAdmin() {
+            try {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONFIG.CONTRACT_ABI, provider);
+                
+                const admin = await contract.admin();
+                
+                addResult(
+                    '✅ Admin Function Works', 
+                    'success', 
+                    'Successfully called admin() function',
+                    `Admin address: ${admin}`
+                );
+                return true;
+            } catch (error) {
+                addResult(
+                    '❌ Admin Function Failed', 
+                    'error', 
+                    'Failed to call admin() function',
+                    `Error: ${error.message}<br><br>This suggests the contract interface doesn't match or the contract is not properly deployed`
+                );
+                return false;
+            }
+        }
+
+        async function checkContractCertificates() {
+            try {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONFIG.CONTRACT_ABI, provider);
+                
+                const totalCerts = await contract.getTotalCertificates();
+                
+                addResult(
+                    '✅ Certificate Count Works', 
+                    'success', 
+                    'Successfully called getTotalCertificates()',
+                    `Total certificates issued: ${totalCerts.toString()}`
+                );
+                return true;
+            } catch (error) {
+                addResult(
+                    '❌ Certificate Function Failed', 
+                    'error', 
+                    'Failed to call getTotalCertificates()',
+                    error.message
+                );
+                return false;
+            }
+        }
+
+        async function checkProviderConnection() {
+            try {
+                const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+                await provider.ready;
+                
+                const network = await provider.getNetwork();
+                const blockNumber = await provider.getBlockNumber();
+                
+                addResult(
+                    '✅ Provider Connection', 
+                    'success', 
+                    'Successfully connected to Ethereum provider',
+                    `Network: ${network.name || 'Unknown'} (${network.chainId})<br>Latest block: ${blockNumber}`
+                );
+                return true;
+            } catch (error) {
+                addResult(
+                    '❌ Provider Connection Failed', 
+                    'error', 
+                    'Failed to connect to provider',
+                    error.message
+                );
+                return false;
+            }
+        }
+
+        async function checkPublicRPC() {
+            try {
+                addResult('🔄 Public RPC Check', 'info', 'Checking contract via public Sepolia RPC...');
+                
+                // Use public Sepolia RPC
+                const provider = new ethers.providers.JsonRpcProvider('https://rpc.sepolia.org');
+                
+                const code = await provider.getCode(CONTRACT_ADDRESS);
+                if (code === '0x' || code === '0x0') {
+                    addResult(
+                        '❌ Contract Not on Sepolia', 
+                        'error', 
+                        'Contract not found on Sepolia via public RPC',
+                        'This confirms the contract is not deployed on Sepolia network'
+                    );
+                    return false;
+                }
+                
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONFIG.CONTRACT_ABI, provider);
+                const admin = await contract.admin();
+                const totalCerts = await contract.getTotalCertificates();
+                
+                addResult(
+                    '✅ Public RPC Success', 
+                    'success', 
+                    'Contract accessible via public Sepolia RPC',
+                    `Admin: ${admin}<br>Total Certificates: ${totalCerts.toString()}`
+                );
+                return true;
+            } catch (error) {
+                addResult(
+                    '❌ Public RPC Check Failed', 
+                    'error', 
+                    'Failed to access contract via public RPC',
+                    error.message
+                );
+                return false;
+            }
+        }
+
+        async function runAllChecks() {
+            clearResults();
+            
+            addResult('🚀 Starting Checks', 'info', 'Running comprehensive contract verification...');
+            
+            // Check 1: MetaMask and Network
+            const metamaskOk = await checkMetaMaskNetwork();
+            
+            // Check 2: Provider Connection
+            await checkProviderConnection();
+            
+            // Check 3: Check via public RPC (independent of MetaMask network)
+            await checkPublicRPC();
+            
+            if (!metamaskOk) {
+                addResult(
+                    '⚠️ Cannot Continue', 
+                    'warning', 
+                    'Please switch MetaMask to Sepolia network and try again'
+                );
+                return;
+            }
+            
+            // Check 4: Contract Bytecode
+            const bytecodeOk = await checkContractBytecode();
+            if (!bytecodeOk) return;
+            
+            // Check 5: Contract Functions
+            await checkContractAdmin();
+            await checkContractCertificates();
+            
+            addResult(
+                '✅ All Checks Complete', 
+                'success', 
+                'Contract verification complete! Check results above.'
+            );
+        }
+
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                addResult('ℹ️ Ready', 'info', 'Click "Run All Checks" to verify the contract deployment');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

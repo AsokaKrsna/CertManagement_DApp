@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcript Verification DApp</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🎓 Transcript Verification DApp</h1>
+            <p class="subtitle">Blockchain-based Academic Certificate Management</p>
+        </header>
+
+        <!-- Wallet Connection -->
+        <div class="wallet-section">
+            <button id="connectWallet" class="btn btn-primary">
+                Connect MetaMask
+            </button>
+            <div id="walletInfo" class="wallet-info" style="display: none;">
+                <span id="walletAddress"></span>
+                <span id="walletRole" class="badge"></span>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="verify">Verify Certificate</button>
+            <button class="tab-btn" data-tab="issue">Issue Certificate</button>
+            <button class="tab-btn" data-tab="admin">Admin Panel</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Verify Certificate Tab -->
+            <div id="verify-tab" class="tab-pane active">
+                <div class="card">
+                    <h2>🔍 Verify Certificate</h2>
+                    <p>Enter certificate hash, upload certificate file, or provide Google Drive link to verify authenticity</p>
+                    
+                    <!-- Method Selection -->
+                    <div class="form-group">
+                        <label>Verification Method:</label>
+                        <select id="verifyMethod" class="form-control">
+                            <option value="hash">Certificate Hash</option>
+                            <option value="file">Upload Certificate File</option>
+                            <option value="drive">Google Drive Link</option>
+                        </select>
+                    </div>
+
+                    <!-- Hash Input -->
+                    <div id="hashInput" class="form-group">
+                        <label for="certHash">Certificate Hash:</label>
+                        <input type="text" id="certHash" class="form-control" 
+                               placeholder="0x123abc...">
+                    </div>
+
+                    <!-- File Upload -->
+                    <div id="fileInput" class="form-group" style="display: none;">
+                        <label for="certFile">Upload Certificate:</label>
+                        <input type="file" id="certFile" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                        <small class="helper-text">Supported: PDF, JPG, PNG</small>
+                    </div>
+
+                    <!-- Drive Link Input -->
+                    <div id="driveInput" class="form-group" style="display: none;">
+                        <label for="driveLink">Google Drive Link:</label>
+                        <input type="text" id="driveLink" class="form-control" 
+                               placeholder="https://drive.google.com/file/d/...">
+                    </div>
+
+                    <button id="verifyBtn" class="btn btn-primary btn-large">
+                        Verify Certificate
+                    </button>
+
+                    <!-- Verification Result -->
+                    <div id="verifyResult" class="result-box" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Issue Certificate Tab -->
+            <div id="issue-tab" class="tab-pane">
+                <div class="card">
+                    <h2>📜 Issue Certificate</h2>
+                    <p>Only authorized registrars can issue certificates</p>
+                    
+                    <div id="issueForm">
+                        <div class="form-group">
+                            <label for="studentAddress">Student Wallet Address:</label>
+                            <input type="text" id="studentAddress" class="form-control" 
+                                   placeholder="0x123abc..." required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="certificateFile">Upload Certificate to Google Drive:</label>
+                            <input type="file" id="certificateFile" class="form-control" 
+                                   accept=".pdf" required>
+                            <small class="helper-text">Upload your certificate PDF to Google Drive first, then paste the shareable link below</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="googleDriveLink">Google Drive Shareable Link:</label>
+                            <input type="url" id="googleDriveLink" class="form-control" 
+                                   placeholder="https://drive.google.com/file/d/..." required>
+                            <small class="helper-text">Make sure the link has "Anyone with the link can view" permissions</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="studentName">Student Name (for reference):</label>
+                            <input type="text" id="studentName" class="form-control" 
+                                   placeholder="John Doe" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="courseName">Course/Degree:</label>
+                            <input type="text" id="courseName" class="form-control" 
+                                   placeholder="Bachelor of Science in Computer Science" required>
+                        </div>
+
+                        <button id="issueBtn" class="btn btn-success btn-large">
+                            Issue Certificate
+                        </button>
+                    </div>
+
+                    <!-- Issue Result -->
+                    <div id="issueResult" class="result-box" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Admin Panel Tab -->
+            <div id="admin-tab" class="tab-pane">
+                <div class="card">
+                    <h2>⚙️ Admin Panel</h2>
+                    <p>Only contract admin can manage registrars</p>
+                    
+                    <!-- Add Registrar -->
+                    <div class="admin-section">
+                        <h3>Add Registrar</h3>
+                        <div class="form-group">
+                            <label for="newRegistrar">Registrar Address:</label>
+                            <input type="text" id="newRegistrar" class="form-control" 
+                                   placeholder="0x123abc...">
+                        </div>
+                        <button id="addRegistrarBtn" class="btn btn-success">
+                            Add Registrar
+                        </button>
+                    </div>
+
+                    <!-- Remove Registrar -->
+                    <div class="admin-section">
+                        <h3>Remove Registrar</h3>
+                        <div class="form-group">
+                            <label for="removeRegistrar">Registrar Address:</label>
+                            <input type="text" id="removeRegistrar" class="form-control" 
+                                   placeholder="0x123abc...">
+                        </div>
+                        <button id="removeRegistrarBtn" class="btn btn-danger">
+                            Remove Registrar
+                        </button>
+                    </div>
+
+                    <!-- Check Registrar Status -->
+                    <div class="admin-section">
+                        <h3>Check Registrar Status</h3>
+                        <div class="form-group">
+                            <label for="checkRegistrar">Address to Check:</label>
+                            <input type="text" id="checkRegistrar" class="form-control" 
+                                   placeholder="0x123abc...">
+                        </div>
+                        <button id="checkRegistrarBtn" class="btn btn-primary">
+                            Check Status
+                        </button>
+                    </div>
+
+                    <!-- Revoke Certificate -->
+                    <div class="admin-section">
+                        <h3>Revoke Certificate</h3>
+                        <div class="form-group">
+                            <label for="revokeHash">Certificate Hash:</label>
+                            <input type="text" id="revokeHash" class="form-control" 
+                                   placeholder="0x123abc...">
+                        </div>
+                        <div class="form-group">
+                            <label for="revokeReason">Reason for Revocation:</label>
+                            <textarea id="revokeReason" class="form-control" rows="3" 
+                                      placeholder="e.g., Student request, Error in certificate"></textarea>
+                        </div>
+                        <button id="revokeBtn" class="btn btn-danger">
+                            Revoke Certificate
+                        </button>
+                    </div>
+
+                    <!-- Admin Result -->
+                    <div id="adminResult" class="result-box" style="display: none;"></div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="card">
+                    <h3>📊 Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalCerts">-</div>
+                            <div class="stat-label">Total Certificates</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="contractAddress">-</div>
+                            <div class="stat-label">Contract Address</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>Built with ❤️ for Academic Integrity | Powered by Ethereum</p>
+            <p class="small">Network: <span id="networkName">Not Connected</span></p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Processing transaction...</p>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <!-- Load ethers.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    
+    <!-- Fallback to another CDN if first one fails -->
+    <script>
+        if (typeof ethers === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"><\/script>');
+        }
+    </script>
+    
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
