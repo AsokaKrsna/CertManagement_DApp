@@ -509,7 +509,6 @@ For detailed information, see:
 
 ## 🎉 Success Criteria
 
-Your project is successful if:
 - ✅ Smart contract deploys to Sepolia
 - ✅ Can issue certificate (store hash)
 - ✅ Can verify certificate (check hash)
@@ -541,13 +540,8 @@ Your project is successful if:
 
 ---
 
-**Let's build something cool and learn a ton! 🚀**
-
----
-
 **Project**: Academic Transcript Verification DApp  
 **Focus**: Simple, Functional, Educational  
 **Timeline**: 2-3 weeks  
 **Goal**: Working demo + solid understanding  
 
-**You got this! 💪**
